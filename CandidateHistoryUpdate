@@ -1,0 +1,36 @@
+global class BatchUpdatecandidatesummary implements Database.Batchable<Sobject>,Database.Stateful{
+    global Database.QueryLocator start(Database.BatchableContext bc) {
+        return Database.getQueryLocator([SELECT Id, Phone__c, Email__c,Candidate_History_Summary__c,(SELECT Id,
+                                          Name,Candidate__c,
+                                          New_Value__c,Old_Value__c,
+                                          HistoryId__c,Operation_Type__c,
+                                          FieldName__c FROM Candidate_histories__r)  FROM Candidate__c WHERE Id IN (SELECT Candidate__c FROM Candidate_History__c)]);
+    }
+    global void execute (Database.BatchableContext bc, List<Candidate__c> candidateList){
+        
+        if(candidateList != null && candidateList.size() > 0){
+            for(Candidate__c candidateObj : candidateList){
+                if(candidateObj.Candidate_History_Summary__c != null){
+                    candidateObj.Candidate_History_Summary__c = null;
+                }
+                for(Candidate_History__c historyObj : candidateObj.Candidate_histories__r){
+                    if(candidateObj.Candidate_History_Summary__c == null){
+                        candidateObj.Candidate_History_Summary__c = historyObj.HistoryId__c +'--'+historyObj.FieldName__c+'--'+historyObj.Old_Value__c+'--'+historyObj.New_Value__c+'--'+historyObj.Operation_Type__c;
+                    }
+                   
+                     else{
+                        candidateObj.Candidate_History_Summary__c = candidateObj.Candidate_History_Summary__c+' \r\n'+historyObj.HistoryId__c +'--'+historyObj.FieldName__c+'--'+historyObj.Old_Value__c+'--'+historyObj.New_Value__c+'--'+historyObj.Operation_Type__c;
+                    }
+                }
+                
+            }
+            
+            
+            update candidateList;
+            System.debug('candidateList '+ candidateList);
+        }
+    }
+    global void finish(Database.BatchableContext bc){
+        System.debug('finish');
+    }
+}
